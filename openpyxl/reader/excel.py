@@ -224,7 +224,7 @@ class ExcelReader:
                 fh = self.archive.open(rel.target)
                 ws = self.wb.create_sheet(sheet.name)
                 ws._rels = rels
-                ws_parser = WorksheetReader(ws, fh, self.shared_strings, self.data_only)
+                ws_parser = WorksheetReader(ws, fh, self.shared_strings, self.data_only, self.read_only)
                 ws_parser.bind_all()
 
             # assign any comments to cells
