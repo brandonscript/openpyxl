@@ -193,9 +193,9 @@ class WorkSheetParser(object):
             self.col_counter += 1
             row, column = self.row_counter, self.col_counter
 
-        if not self.data_only and element.find(FORMULA_TAG) is not None:
+        if element.find(FORMULA_TAG) is not None:
             data_type = 'f'
-            value = self.parse_formula(element)
+            formula = self.parse_formula(element)
 
         elif value is not None:
             if data_type == 'n':
@@ -227,7 +227,10 @@ class WorkSheetParser(object):
                     richtext = Text.from_tree(child)
                     value = richtext.content
 
-        return {'row':row, 'column':column, 'value':value, 'data_type':data_type, 'style_id':style_id}
+        cell = {'row':row, 'column':column, 'value':value, 'data_type':data_type, 'style_id':style_id}
+        if data_type == 'f':
+            cell['formula'] = formula
+        return cell
 
 
     def parse_formula(self, element):
@@ -237,9 +240,9 @@ class WorkSheetParser(object):
         formula = element.find(FORMULA_TAG)
         formula_type = formula.get('t')
         coordinate = element.get('r')
-        value = "="
+        formula = "="
         if formula.text is not None:
-            value += formula.text
+            formula += formula.text
 
         if formula_type == "array":
             self.array_formulae[coordinate] = dict(formula.attrib)
@@ -248,11 +251,11 @@ class WorkSheetParser(object):
             idx = formula.get('si')
             if idx in self.shared_formulae:
                 trans = self.shared_formulae[idx]
-                value = trans.translate_formula(coordinate)
-            elif value != "=":
-                self.shared_formulae[idx] = Translator(value, coordinate)
+                formula = trans.translate_formula(coordinate)
+            elif formula != "=":
+                self.shared_formulae[idx] = Translator(formula, coordinate)
 
-        return value
+        return formula
 
 
     def parse_column_dimensions(self, col):

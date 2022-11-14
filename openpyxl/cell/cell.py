@@ -97,12 +97,13 @@ class Cell(StyleableObject):
         'column',
         '_value',
         'data_type',
+        'formula',
         'parent',
         '_hyperlink',
         '_comment',
                  )
 
-    def __init__(self, worksheet, row=None, column=None, value=None, style_array=None):
+    def __init__(self, worksheet, row=None, column=None, value=None, formula=None, style_array=None):
         super(Cell, self).__init__(worksheet, style_array)
         self.row = row
         """Row number of this cell (1-based)"""
@@ -114,6 +115,8 @@ class Cell(StyleableObject):
         self.data_type = 'n'
         if value is not None:
             self.value = value
+        if formula is not None:
+            self.formula = formula
         self._comment = None
 
 
