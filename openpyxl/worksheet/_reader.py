@@ -84,7 +84,7 @@ def _cast_number(value):
 
 class WorkSheetParser(object):
 
-    def __init__(self, src, shared_strings, data_only=False,
+    def __init__(self, src, shared_strings, data_only=False, read_only=False,
                  epoch=WINDOWS_EPOCH, date_formats=set(),
                  timedelta_formats=set()):
         self.min_row = self.min_col = None
@@ -92,6 +92,7 @@ class WorkSheetParser(object):
         self.source = src
         self.shared_strings = shared_strings
         self.data_only = data_only
+        self.read_only = read_only
         self.shared_formulae = {}
         self.array_formulae = {}
         self.row_counter = self.col_counter = 0
@@ -176,6 +177,8 @@ class WorkSheetParser(object):
 
     def parse_cell(self, element):
         data_type = element.get('t', 'n')
+        computed_data_type = None
+        computed_value = None
         coordinate = element.get('r')
         style_id = element.get('s', 0)
         if style_id:
@@ -192,33 +195,19 @@ class WorkSheetParser(object):
         else:
             self.col_counter += 1
             row, column = self.row_counter, self.col_counter
+        
+        if data_type == "d":
+            print("data_type is d")
 
-        if element.find(FORMULA_TAG) is not None:
+        if not self.data_only and element.find(FORMULA_TAG) is not None:
+            if self.read_only:
+                computed_data_type = copy(data_type)
+                computed_value = self.parse_value(data_type, coordinate, style_id, value)
             data_type = 'f'
-            formula = self.parse_formula(element)
+            value = self.parse_formula(element)
 
         elif value is not None:
-            if data_type == 'n':
-                value = _cast_number(value)
-                if style_id in self.date_formats:
-                    data_type = 'd'
-                    try:
-                        value = from_excel(
-                            value, self.epoch, timedelta=style_id in self.timedelta_formats
-                        )
-                    except (OverflowError, ValueError):
-                        msg = f"""Cell {coordinate} is marked as a date but the serial value {value} is outside the limits for dates. The cell will be treated as an error."""
-                        warn(msg)
-                        data_type = "e"
-                        value = "#VALUE!"
-            elif data_type == 's':
-                value = self.shared_strings[int(value)]
-            elif data_type == 'b':
-                value = bool(int(value))
-            elif data_type == "str":
-                data_type = "s"
-            elif data_type == 'd':
-                value = from_ISO8601(value)
+            value = self.parse_value(data_type, coordinate, style_id, value)
 
         elif data_type == 'inlineStr':
                 child = element.find(INLINE_STRING)
@@ -228,9 +217,34 @@ class WorkSheetParser(object):
                     value = richtext.content
 
         cell = {'row':row, 'column':column, 'value':value, 'data_type':data_type, 'style_id':style_id}
-        if data_type == 'f':
-            cell['formula'] = formula
+        if computed_value is not None:
+            cell['computed_value'] = computed_value
+            cell['computed_data_type'] = computed_data_type
         return cell
+
+    def parse_value(self, data_type, coordinate, style_id, value):
+        if data_type == 'n':
+            value = _cast_number(value)
+            if style_id in self.date_formats:
+                data_type = 'd'
+                try:
+                    value = from_excel(
+                            value, self.epoch, timedelta=style_id in self.timedelta_formats
+                        )
+                except (OverflowError, ValueError):
+                    msg = f"""Cell {coordinate} is marked as a date but the serial value {value} is outside the limits for dates. The cell will be treated as an error."""
+                    warn(msg)
+                    data_type = "e"
+                    value = "#VALUE!"
+        elif data_type == 's':
+            value = self.shared_strings[int(value)]
+        elif data_type == 'b':
+            value = bool(int(value))
+        elif data_type == "str":
+            data_type = "s"
+        elif data_type == 'd':
+            value = from_ISO8601(value)
+        return value
 
 
     def parse_formula(self, element):
@@ -240,9 +254,9 @@ class WorkSheetParser(object):
         formula = element.find(FORMULA_TAG)
         formula_type = formula.get('t')
         coordinate = element.get('r')
-        formula = "="
+        value = "="
         if formula.text is not None:
-            formula += formula.text
+            value += formula.text
 
         if formula_type == "array":
             self.array_formulae[coordinate] = dict(formula.attrib)
@@ -251,11 +265,11 @@ class WorkSheetParser(object):
             idx = formula.get('si')
             if idx in self.shared_formulae:
                 trans = self.shared_formulae[idx]
-                formula = trans.translate_formula(coordinate)
-            elif formula != "=":
-                self.shared_formulae[idx] = Translator(formula, coordinate)
+                value = trans.translate_formula(coordinate)
+            elif value != "=":
+                self.shared_formulae[idx] = Translator(value, coordinate)
 
-        return formula
+        return value
 
 
     def parse_column_dimensions(self, col):

@@ -74,7 +74,9 @@ class ReadOnlyWorksheet(object):
         idx = 1
         src = self._get_source()
         parser = WorkSheetParser(src, self._shared_strings,
-                                 data_only=self.parent.data_only, epoch=self.parent.epoch,
+                                 data_only=self.parent.data_only, 
+                                 read_only=self.parent.read_only,
+                                 epoch=self.parent.epoch,
                                  date_formats=self.parent._date_formats)
         for idx, row in parser.parse():
             if max_row is not None and idx > max_row:

@@ -9,15 +9,16 @@ from openpyxl.styles.numbers import BUILTIN_FORMATS, BUILTIN_FORMATS_MAX_SIZE
 
 class ReadOnlyCell(object):
 
-    __slots__ =  ('parent', 'row', 'column', '_value', 'data_type', '_style_id')
+    __slots__ =  ('parent', 'row', 'column', '_value', 'computed_value', 'data_type', '_style_id')
 
-    def __init__(self, sheet, row, column, value, data_type='n', style_id=0):
+    def __init__(self, sheet, row, column, value, computed_value=None, data_type='n', style_id=0):
         self.parent = sheet
         self._value = None
         self.row = row
         self.column = column
         self.data_type = data_type
         self.value = value
+        self.computed_value = computed_value
         self._style_id = style_id
 
 

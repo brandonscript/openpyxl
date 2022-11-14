@@ -20,6 +20,7 @@ def DummyWorkbook():
         epoch = None
         _cell_styles = [StyleArray([0, 0, 0, 0, 0, 0, 0, 0, 0])]
         data_only = False
+        read_only = False
 
         def __init__(self):
             self.sheetnames = []
@@ -270,6 +271,31 @@ def test_read_single_cell_formula(datadir, data_only, expected):
     cell = ws["D2"]
     assert ws.parent.data_only == data_only
     assert cell.value == expected
+
+@pytest.mark.parametrize("read_only, expected_value, expected_computed",
+    [
+    (True, 5, "='Sheet2 - Numbers'!D5"),
+    (False, "='Sheet2 - Numbers'!D5", None)
+    ]
+    )
+def test_read_only_single_cell_formula_includes_computed(datadir, 
+                                                         read_only, 
+                                                         expected_value,
+                                                         expected_computed):
+    datadir.join("genuine").chdir()
+    wb = load_workbook("sample.xlsx", read_only=read_only)
+    ws = wb["Sheet3 - Formulas"]
+    cell = ws["D2"]
+    assert ws.parent.data_only == False
+    assert ws.parent.read_only == read_only
+    assert cell.value == expected_value
+    assert cell.data_type == 'f'
+    if expected_computed:
+        assert cell.computed_value == expected_computed
+        assert cell.computed_data_type != 'f'
+    else:
+        assert 'computed_value' not in dir(cell)
+        assert 'computed_data_type' not in dir(cell)
 
 
 def test_read_style_iter(tmpdir):
