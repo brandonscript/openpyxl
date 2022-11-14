@@ -274,7 +274,7 @@ def test_read_single_cell_formula(datadir, data_only, expected):
 
 @pytest.mark.parametrize("read_only, expected_value, expected_computed",
     [
-    (True, 5, "='Sheet2 - Numbers'!D5"),
+    (True, "='Sheet2 - Numbers'!D5", 5),
     (False, "='Sheet2 - Numbers'!D5", None)
     ]
     )
