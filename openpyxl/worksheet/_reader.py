@@ -223,27 +223,28 @@ class WorkSheetParser(object):
         return cell
 
     def parse_value(self, data_type, coordinate, style_id, value):
-        if data_type == 'n':
-            value = _cast_number(value)
-            if style_id in self.date_formats:
-                data_type = 'd'
-                try:
-                    value = from_excel(
-                            value, self.epoch, timedelta=style_id in self.timedelta_formats
-                        )
-                except (OverflowError, ValueError):
-                    msg = f"""Cell {coordinate} is marked as a date but the serial value {value} is outside the limits for dates. The cell will be treated as an error."""
-                    warn(msg)
-                    data_type = "e"
-                    value = "#VALUE!"
-        elif data_type == 's':
-            value = self.shared_strings[int(value)]
-        elif data_type == 'b':
-            value = bool(int(value))
-        elif data_type == "str":
-            data_type = "s"
-        elif data_type == 'd':
-            value = from_ISO8601(value)
+        if value is not None:
+            if data_type == 'n':
+                value = _cast_number(value)
+                if style_id in self.date_formats:
+                    data_type = 'd'
+                    try:
+                        value = from_excel(
+                                value, self.epoch, timedelta=style_id in self.timedelta_formats
+                            )
+                    except (OverflowError, ValueError):
+                        msg = f"""Cell {coordinate} is marked as a date but the serial value {value} is outside the limits for dates. The cell will be treated as an error."""
+                        warn(msg)
+                        data_type = "e"
+                        value = "#VALUE!"
+            elif data_type == 's':
+                value = self.shared_strings[int(value)]
+            elif data_type == 'b':
+                value = bool(int(value))
+            elif data_type == "str":
+                data_type = "s"
+            elif data_type == 'd':
+                value = from_ISO8601(value)
         return value
 
 
